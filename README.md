@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">ProxQL</h1>
   <p align="center">
-    <strong>SQL validation library that stops your AI from dropping tables</strong>
+    <strong>The Database Firewall for AI Agents</strong>
   </p>
 </p>
 
