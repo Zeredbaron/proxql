@@ -6,6 +6,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/zeredbaron/proxql/actions"><img src="https://github.com/zeredbaron/proxql/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://pypi.org/project/proxql/"><img src="https://img.shields.io/pypi/v/proxql?color=blue" alt="PyPI"></a>
   <a href="https://github.com/zeredbaron/proxql/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/pypi/pyversions/proxql" alt="Python"></a>
@@ -280,6 +281,17 @@ ProxQL correctly detects:
 - **Comments**: `SELECT * /* DROP TABLE */ FROM users` — comments ignored
 - **Case sensitivity**: `drop TABLE Users` normalized correctly
 
+## Performance
+
+ProxQL adds negligible latency to your queries:
+
+```
+⏱️  ~200 µs per validation
+🚀 5,000+ queries/second
+```
+
+Validation happens in-memory using [sqlglot](https://sqlglot.com/)'s fast parser — no network calls, no database round-trips.
+
 ## Why ProxQL?
 
 > "You wouldn't give a junior intern root access to production. Why are you giving it to a hallucinating AI?"
@@ -287,6 +299,15 @@ ProxQL correctly detects:
 Every AI framework (LangChain, CrewAI, AutoGen) lets you connect to databases. None of them protect you from what the AI might do once connected.
 
 **ProxQL is the missing safety layer.**
+
+## Examples
+
+See the [`examples/`](examples/) directory for runnable demos:
+
+```bash
+# Watch an AI try to DROP TABLE and get blocked
+python examples/langchain_demo.py
+```
 
 ## Contributing
 
