@@ -1,6 +1,6 @@
 import type { AST } from 'node-sql-parser';
 import { ValidationResult } from '../result';
-import { SecurityConfig, RuleSeverity, compareSeverity } from '../security';
+import { SecurityConfig, RuleSeverity } from '../security';
 
 /**
  * Base interface for security rules.
@@ -220,10 +220,11 @@ const hexEncodingRule: Rule = {
     while ((match = hexPattern.exec(sql)) !== null) {
       try {
         const hexValue = match[1];
+        if (!hexValue) continue;
         // Convert hex to string
         let decoded = '';
         for (let i = 0; i < hexValue.length; i += 2) {
-          decoded += String.fromCharCode(parseInt(hexValue.substr(i, 2), 16));
+          decoded += String.fromCharCode(parseInt(hexValue.substring(i, i + 2), 16));
         }
         const decodedUpper = decoded.toUpperCase();
 
@@ -261,7 +262,10 @@ const charFunctionRule: Rule = {
 
     let match;
     while ((match = charPattern.exec(sql)) !== null) {
-      chars.push(parseInt(match[1], 10));
+      const charCode = match[1];
+      if (charCode) {
+        chars.push(parseInt(charCode, 10));
+      }
     }
 
     if (chars.length >= 4) {
@@ -299,7 +303,10 @@ const stringConcatRule: Rule = {
 
     let match;
     while ((match = concatPattern.exec(sql)) !== null) {
-      const combined = (match[1] + match[2]).toUpperCase();
+      const part1 = match[1];
+      const part2 = match[2];
+      if (!part1 || !part2) continue;
+      const combined = (part1 + part2).toUpperCase();
 
       for (const keyword of dangerousKeywords) {
         if (combined.includes(keyword)) {
