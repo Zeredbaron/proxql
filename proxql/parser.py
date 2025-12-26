@@ -95,4 +95,3 @@ class Parser:
             if table.name:
                 tables.append(table.name.lower())
         return list(set(tables))  # Deduplicate
-

@@ -162,7 +162,7 @@ Supported dialects: `postgres`, `mysql`, `sqlite`, `snowflake`, `bigquery`, `red
 
 ## API Reference
 
-### `proxql.validate(sql, *, mode, allowed_tables, dialect)`
+### `proxql.validate(sql, *, mode, allowed_tables, dialect, security)`
 
 Validate a SQL query string.
 
@@ -173,6 +173,7 @@ proxql.validate(
     mode: str = "read_only",               # "read_only" | "write_safe" | "custom"
     allowed_tables: list[str] | None = None,  # Optional table whitelist
     dialect: str | None = None,            # SQL dialect (auto-detected if None)
+    security: bool | SecurityConfig = True,  # Security rule configuration
 ) -> ValidationResult
 ```
 
@@ -190,7 +191,7 @@ proxql.is_safe("DROP TABLE users")     # False
 For repeated validations, create a Validator instance:
 
 ```python
-from proxql import Validator
+from proxql import Validator, SecurityConfig
 
 validator = Validator(
     mode: str = "read_only",               # Validation mode
@@ -198,10 +199,29 @@ validator = Validator(
     allowed_statements: list[str] | None = None,  # For custom mode
     blocked_statements: list[str] | None = None,  # For custom mode
     dialect: str | None = None,            # SQL dialect
+    security_config: bool | SecurityConfig = True,  # Security rules
 )
 
 result = validator.validate(sql: str) -> ValidationResult
 ```
+
+### `proxql.SecurityConfig`
+
+Configure security rule behavior:
+
+```python
+from proxql import SecurityConfig, RuleSeverity
+
+config = SecurityConfig(
+    enabled: bool = True,                  # Enable/disable all security rules
+    minimum_severity: RuleSeverity = RuleSeverity.HIGH,  # Minimum severity to check
+    disabled_rules: set[str] = set(),      # Rule IDs to skip
+    enabled_rules: set[str] | None = None, # If set, ONLY run these rules
+    fail_on_low: bool = False,             # Whether LOW severity blocks queries
+)
+```
+
+**Available Rule IDs:** `file-access`, `system-command`, `dynamic-sql`, `privilege-escalation`, `stored-procedure`, `unicode-obfuscation`, `dangerous-functions`, `hex-encoding`, `char-function`, `string-concat`, `transaction-abuse`, `metadata-access`, `schema-commands`
 
 ### `ValidationResult`
 
@@ -270,6 +290,80 @@ async def run_query(query: str):
     # Execute query...
 ```
 
+## Security Rules
+
+Beyond statement types and table allowlists, ProxQL includes deep security analysis to detect SQL injection patterns:
+
+| Category | Severity | What It Detects |
+|----------|----------|-----------------|
+| **File Access** | 🔴 CRITICAL | `INTO OUTFILE`, `LOAD DATA INFILE`, `COPY`, `pg_read_file()` |
+| **System Commands** | 🔴 CRITICAL | `xp_cmdshell`, `xp_regread`, OLE automation procs |
+| **Dynamic SQL** | 🔴 CRITICAL | `EXEC`, `EXECUTE`, `PREPARE`, `sp_executesql` |
+| **Privilege Escalation** | 🔴 CRITICAL | `CREATE USER`, `ALTER USER`, `SET ROLE` |
+| **Stored Procedures** | 🟡 HIGH | `CALL` statements |
+| **Unicode Homoglyphs** | 🟡 HIGH | Cyrillic/Greek chars masquerading as ASCII |
+| **Timing Attacks** | 🟠 MEDIUM | `SLEEP()`, `pg_sleep()`, `BENCHMARK()` |
+| **String Obfuscation** | 🟠 MEDIUM | `CHAR(68,82,79,80)` spelling DROP, hex encoding |
+| **Transaction Abuse** | 🟠 MEDIUM | `LOCK TABLE` (DoS vector) |
+| **Metadata Access** | 🟢 LOW | `information_schema`, `pg_catalog`, `SHOW TABLES` |
+
+### Configuring Security Rules
+
+```python
+from proxql import Validator, SecurityConfig, RuleSeverity
+
+# Default: Only HIGH+ severity rules block queries
+validator = Validator(mode="read_only")
+
+# More sensitive: Include MEDIUM severity
+validator = Validator(
+    mode="read_only",
+    security_config=SecurityConfig(minimum_severity=RuleSeverity.MEDIUM)
+)
+
+# Paranoid mode: Block everything including metadata access
+validator = Validator(
+    mode="read_only",
+    security_config=SecurityConfig(
+        minimum_severity=RuleSeverity.LOW,
+        fail_on_low=True
+    )
+)
+
+# Disable specific rules
+validator = Validator(
+    mode="read_only",
+    security_config=SecurityConfig(
+        disabled_rules={"metadata-access", "schema-commands"}
+    )
+)
+
+# Disable all security rules (just policy checks)
+validator = Validator(mode="read_only", security_config=False)
+```
+
+### Security Rule Examples
+
+```python
+import proxql
+
+# File access attempts are blocked
+result = proxql.validate("SELECT pg_read_file('/etc/passwd')")
+# is_safe=False, reason="Dangerous file function 'pg_read_file' detected"
+
+# RCE attempts are blocked
+result = proxql.validate("SELECT xp_cmdshell('whoami')")
+# is_safe=False, reason="System command function 'xp_cmdshell' detected"
+
+# Obfuscation is detected
+result = proxql.validate("SELECT CONCAT(CHAR(68), CHAR(82), CHAR(79), CHAR(80))")
+# is_safe=False, reason="CHAR()-constructed SQL keyword detected: 'DROP'"
+
+# Unicode homoglyphs are caught (Cyrillic 'а' instead of Latin 'a')
+result = proxql.validate("SELECT * FROM users WHERE nаme = 'admin'")
+# is_safe=False, reason="Unicode homoglyphs detected - possible keyword obfuscation"
+```
+
 ## Edge Cases Handled
 
 ProxQL correctly detects:
@@ -280,6 +374,8 @@ ProxQL correctly detects:
 - **Multi-statement**: `SELECT 1; DROP TABLE users;` — blocks if any unsafe
 - **Comments**: `SELECT * /* DROP TABLE */ FROM users` — comments ignored
 - **Case sensitivity**: `drop TABLE Users` normalized correctly
+- **Hex encoding**: `0x44524F50` (spells 'DROP') detected and decoded
+- **CHAR() abuse**: `CHAR(68,82,79,80)` character-by-character construction detected
 
 ## Performance
 

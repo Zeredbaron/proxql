@@ -22,27 +22,31 @@ class Mode(str, Enum):
 # Statement types allowed in each mode
 READ_ONLY_ALLOWED = frozenset({"SELECT", "WITH"})  # WITH for CTEs that select
 
-WRITE_SAFE_ALLOWED = frozenset({
-    "SELECT",
-    "WITH",
-    "INSERT",
-    "UPDATE",
-})
+WRITE_SAFE_ALLOWED = frozenset(
+    {
+        "SELECT",
+        "WITH",
+        "INSERT",
+        "UPDATE",
+    }
+)
 
 # Destructive statements that are always blocked in write_safe mode
 # Note: sqlglot uses compound names like TRUNCATETABLE for some statements
-DESTRUCTIVE_STATEMENTS = frozenset({
-    "DROP",
-    "TRUNCATE",
-    "TRUNCATETABLE",  # sqlglot uses this for TRUNCATE TABLE
-    "ALTER",
-    "DELETE",
-    "CREATE",
-    "RENAME",
-    "REPLACE",
-    "GRANT",
-    "REVOKE",
-})
+DESTRUCTIVE_STATEMENTS = frozenset(
+    {
+        "DROP",
+        "TRUNCATE",
+        "TRUNCATETABLE",  # sqlglot uses this for TRUNCATE TABLE
+        "ALTER",
+        "DELETE",
+        "CREATE",
+        "RENAME",
+        "REPLACE",
+        "GRANT",
+        "REVOKE",
+    }
+)
 
 
 class PolicyEngine:
@@ -71,9 +75,7 @@ class PolicyEngine:
             blocked_statements: For custom mode, statements to block.
         """
         self.mode = Mode(mode) if isinstance(mode, str) else mode
-        self.allowed_tables = (
-            {t.lower() for t in allowed_tables} if allowed_tables else None
-        )
+        self.allowed_tables = {t.lower() for t in allowed_tables} if allowed_tables else None
         self.allowed_statements = (
             {s.upper() for s in allowed_statements} if allowed_statements else None
         )
@@ -177,4 +179,3 @@ class PolicyEngine:
                 )
 
         return ValidationResult(is_safe=True)
-

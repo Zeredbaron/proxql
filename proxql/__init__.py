@@ -29,6 +29,18 @@ Modes:
     - write_safe: SELECT, INSERT, UPDATE allowed (no destructive ops)
     - custom: Define your own allowed/blocked statement types
 
+Security Rules:
+    ProxQL includes deep security analysis to detect SQL injection patterns:
+    - File access (INTO OUTFILE, LOAD DATA, COPY)
+    - Dynamic SQL (EXEC, PREPARE, EXECUTE)
+    - System commands (xp_cmdshell)
+    - Privilege escalation (CREATE USER)
+    - Obfuscation (hex encoding, CHAR() abuse, Unicode homoglyphs)
+
+    >>> from proxql import SecurityConfig, RuleSeverity
+    >>> config = SecurityConfig(minimum_severity=RuleSeverity.MEDIUM)
+    >>> v = Validator(mode="read_only", security_config=config)
+
 For more details, see: https://github.com/zeredbaron/proxql
 """
 
@@ -39,6 +51,8 @@ from typing import TYPE_CHECKING
 from .exceptions import ConfigurationError, ParseError, ProxQLError
 from .policy import Mode
 from .result import ValidationResult
+from .rules import RuleSeverity
+from .security import SecurityChecker, SecurityConfig
 from .validator import Validator
 
 if TYPE_CHECKING:
@@ -53,6 +67,10 @@ __all__ = [
     # Types
     "ValidationResult",
     "Mode",
+    # Security
+    "SecurityConfig",
+    "SecurityChecker",
+    "RuleSeverity",
     # Exceptions
     "ProxQLError",
     "ParseError",
@@ -69,6 +87,7 @@ def validate(
     mode: Mode | str = Mode.READ_ONLY,
     allowed_tables: Sequence[str] | None = None,
     dialect: str | None = None,
+    security: bool | SecurityConfig = True,
 ) -> ValidationResult:
     """Validate a SQL query.
 
@@ -77,14 +96,16 @@ def validate(
 
     Args:
         sql: The SQL query string to validate.
-        mode: Validation mode - "read_only" (default), "write_safe", or "custom".
+        mode: Validation mode - "read_only", "write_safe", or "custom".
         allowed_tables: Optional list of table names that can be accessed.
-            If set, queries referencing other tables will be blocked.
-        dialect: SQL dialect for parsing (e.g., 'postgres', 'mysql', 'snowflake').
-            If None, sqlglot will auto-detect.
+        dialect: SQL dialect for parsing ('postgres', 'mysql', 'snowflake').
+        security: Security rule configuration:
+            - True (default): Enable default rules (HIGH+ severity)
+            - False: Disable security rules
+            - SecurityConfig: Custom security configuration
 
     Returns:
-        ValidationResult with is_safe=True if query passes all checks,
+        ValidationResult with is_safe=True if query passes,
         or is_safe=False with a reason explaining why it was blocked.
 
     Examples:
@@ -97,7 +118,8 @@ def validate(
         False
 
         # Allow writes
-        >>> proxql.validate("INSERT INTO logs VALUES (1)", mode="write_safe").is_safe
+        >>> sql = "INSERT INTO logs VALUES (1)"
+        >>> proxql.validate(sql, mode="write_safe").is_safe
         True
 
         # Restrict to specific tables
@@ -106,9 +128,16 @@ def validate(
         ...     allowed_tables=["products", "categories"]
         ... ).is_safe
         False
+
+        # Disable security rules (faster, less thorough)
+        >>> proxql.validate("SELECT * FROM users", security=False).is_safe
+        True
     """
     # Use default validator for simple read_only case (optimization)
-    if mode == Mode.READ_ONLY and allowed_tables is None and dialect is None:
+    is_default = (
+        mode == Mode.READ_ONLY and allowed_tables is None and dialect is None and security is True
+    )
+    if is_default:
         return _default_validator.validate(sql)
 
     # Create a one-off validator for custom configuration
@@ -116,6 +145,7 @@ def validate(
         mode=mode,
         allowed_tables=list(allowed_tables) if allowed_tables else None,
         dialect=dialect,
+        security_config=security,
     )
     return validator.validate(sql)
 
@@ -126,6 +156,7 @@ def is_safe(
     mode: Mode | str = Mode.READ_ONLY,
     allowed_tables: Sequence[str] | None = None,
     dialect: str | None = None,
+    security: bool | SecurityConfig = True,
 ) -> bool:
     """Check if a SQL query is safe (convenience wrapper).
 
@@ -134,9 +165,10 @@ def is_safe(
 
     Args:
         sql: The SQL query string to validate.
-        mode: Validation mode - "read_only" (default), "write_safe", or "custom".
+        mode: Validation mode ("read_only", "write_safe", "custom").
         allowed_tables: Optional list of table names that can be accessed.
         dialect: SQL dialect for parsing.
+        security: Security rule config (True/False/SecurityConfig).
 
     Returns:
         True if the query passes all validation checks, False otherwise.
@@ -154,4 +186,10 @@ def is_safe(
         ... else:
         ...     raise SecurityError("Query blocked")
     """
-    return validate(sql, mode=mode, allowed_tables=allowed_tables, dialect=dialect).is_safe
+    return validate(
+        sql,
+        mode=mode,
+        allowed_tables=allowed_tables,
+        dialect=dialect,
+        security=security,
+    ).is_safe

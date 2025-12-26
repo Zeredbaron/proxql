@@ -19,4 +19,3 @@ class ConfigurationError(ProxQLError):
     """Raised when validator configuration is invalid."""
 
     pass
-

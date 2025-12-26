@@ -22,4 +22,3 @@ class ValidationResult:
     def __bool__(self) -> bool:
         """Allow using result directly in boolean context."""
         return self.is_safe
-
