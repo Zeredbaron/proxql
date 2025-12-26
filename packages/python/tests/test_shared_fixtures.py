@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 import proxql
-from proxql import RuleSeverity, SecurityConfig, Validator
+from proxql import RuleSeverity, SecurityConfig
 
 FIXTURES_DIR = Path(__file__).parent.parent.parent.parent / "shared" / "test-cases"
 
