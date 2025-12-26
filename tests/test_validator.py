@@ -189,3 +189,106 @@ class TestValidationResult:
             passed = False
         assert passed is True
 
+
+class TestCustomMode:
+    """Test custom mode behavior."""
+
+    def test_allowed_statements_only(self) -> None:
+        """Custom mode with only allowed_statements specified."""
+        validator = Validator(
+            mode="custom",
+            allowed_statements=["SELECT", "INSERT"],
+        )
+        assert validator.validate("SELECT * FROM users").is_safe is True
+        assert validator.validate("INSERT INTO users (name) VALUES ('x')").is_safe is True
+        assert validator.validate("DELETE FROM users").is_safe is False
+
+    def test_blocked_statements_only(self) -> None:
+        """Custom mode with only blocked_statements specified."""
+        validator = Validator(
+            mode="custom",
+            # Note: sqlglot uses TRUNCATETABLE for "TRUNCATE TABLE" statements
+            blocked_statements=["DROP", "TRUNCATETABLE"],
+        )
+        assert validator.validate("SELECT * FROM users").is_safe is True
+        assert validator.validate("DROP TABLE users").is_safe is False
+        assert validator.validate("TRUNCATE TABLE users").is_safe is False
+
+    def test_blocked_takes_precedence(self) -> None:
+        """Blocked statements take precedence over allowed."""
+        validator = Validator(
+            mode="custom",
+            allowed_statements=["SELECT", "DROP"],
+            blocked_statements=["DROP"],
+        )
+        # DROP is in both allowed and blocked - blocked wins
+        assert validator.validate("DROP TABLE users").is_safe is False
+        assert validator.validate("SELECT * FROM users").is_safe is True
+
+
+class TestEdgeCases:
+    """Test edge cases and unusual inputs."""
+
+    def test_select_with_where_clause(self) -> None:
+        result = proxql.validate("SELECT * FROM users WHERE id = 1 AND name = 'test'")
+        assert result.is_safe is True
+        assert result.statement_type == "SELECT"
+
+    def test_select_with_aggregations(self) -> None:
+        result = proxql.validate(
+            "SELECT COUNT(*), AVG(price) FROM products GROUP BY category HAVING COUNT(*) > 5"
+        )
+        assert result.is_safe is True
+
+    def test_comments_are_ignored(self) -> None:
+        """SQL comments should be ignored, not treated as executable."""
+        result = proxql.validate("SELECT * FROM users /* ; DROP TABLE users; */")
+        assert result.is_safe is True
+
+    def test_inline_comments(self) -> None:
+        result = proxql.validate("SELECT * FROM users -- DROP TABLE users")
+        assert result.is_safe is True
+
+    def test_case_insensitive_keywords(self) -> None:
+        """SQL keywords should be case-insensitive."""
+        result = proxql.validate("select * from users")
+        assert result.is_safe is True
+
+        result = proxql.validate("SeLeCt * FrOm users")
+        assert result.is_safe is True
+
+    def test_dialect_postgres(self) -> None:
+        """Test Postgres-specific syntax."""
+        validator = Validator(mode="read_only", dialect="postgres")
+        result = validator.validate("SELECT * FROM users LIMIT 10 OFFSET 5")
+        assert result.is_safe is True
+
+    def test_dialect_mysql(self) -> None:
+        """Test MySQL-specific syntax."""
+        validator = Validator(mode="read_only", dialect="mysql")
+        result = validator.validate("SELECT * FROM users LIMIT 5, 10")
+        assert result.is_safe is True
+
+    def test_subquery_table_detection(self) -> None:
+        """Tables in subqueries should be detected."""
+        validator = Validator(
+            mode="read_only",
+            allowed_tables=["products"],
+        )
+        # This should fail because 'secret_table' is accessed in subquery
+        result = validator.validate("SELECT * FROM (SELECT * FROM secret_table) AS t")
+        assert result.is_safe is False
+        assert "secret_table" in (result.reason or "")
+
+    def test_cte_table_detection(self) -> None:
+        """Tables in CTEs should be detected."""
+        validator = Validator(
+            mode="read_only",
+            allowed_tables=["allowed_table"],
+        )
+        result = validator.validate("""
+            WITH temp AS (SELECT * FROM secret_table)
+            SELECT * FROM temp
+        """)
+        assert result.is_safe is False
+

@@ -30,9 +30,11 @@ WRITE_SAFE_ALLOWED = frozenset({
 })
 
 # Destructive statements that are always blocked in write_safe mode
+# Note: sqlglot uses compound names like TRUNCATETABLE for some statements
 DESTRUCTIVE_STATEMENTS = frozenset({
     "DROP",
     "TRUNCATE",
+    "TRUNCATETABLE",  # sqlglot uses this for TRUNCATE TABLE
     "ALTER",
     "DELETE",
     "CREATE",
