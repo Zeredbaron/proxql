@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">ProxQL</h1>
   <p align="center">
-    <strong>A 50-line firewall to stop your AI from dropping tables</strong>
+    <strong>SQL validation library that stops your AI from dropping tables</strong>
   </p>
 </p>
 
@@ -16,6 +16,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#modes">Modes</a> •
+  <a href="#security-rules">Security</a> •
   <a href="#api-reference">API Reference</a> •
   <a href="#integrations">Integrations</a>
 </p>
@@ -292,20 +293,23 @@ async def run_query(query: str):
 
 ## Security Rules
 
-Beyond statement types and table allowlists, ProxQL includes deep security analysis to detect SQL injection patterns:
+Beyond statement types and table allowlists, ProxQL includes 13 security rules to detect SQL injection patterns:
 
-| Category | Severity | What It Detects |
-|----------|----------|-----------------|
-| **File Access** | 🔴 CRITICAL | `INTO OUTFILE`, `LOAD DATA INFILE`, `COPY`, `pg_read_file()` |
-| **System Commands** | 🔴 CRITICAL | `xp_cmdshell`, `xp_regread`, OLE automation procs |
-| **Dynamic SQL** | 🔴 CRITICAL | `EXEC`, `EXECUTE`, `PREPARE`, `sp_executesql` |
-| **Privilege Escalation** | 🔴 CRITICAL | `CREATE USER`, `ALTER USER`, `SET ROLE` |
-| **Stored Procedures** | 🟡 HIGH | `CALL` statements |
-| **Unicode Homoglyphs** | 🟡 HIGH | Cyrillic/Greek chars masquerading as ASCII |
-| **Timing Attacks** | 🟠 MEDIUM | `SLEEP()`, `pg_sleep()`, `BENCHMARK()` |
-| **String Obfuscation** | 🟠 MEDIUM | `CHAR(68,82,79,80)` spelling DROP, hex encoding |
-| **Transaction Abuse** | 🟠 MEDIUM | `LOCK TABLE` (DoS vector) |
-| **Metadata Access** | 🟢 LOW | `information_schema`, `pg_catalog`, `SHOW TABLES` |
+| Rule ID | Severity | What It Detects |
+|---------|----------|-----------------|
+| `file-access` | 🔴 CRITICAL | `INTO OUTFILE`, `LOAD DATA INFILE`, `COPY`, `pg_read_file()` |
+| `system-command` | 🔴 CRITICAL | `xp_cmdshell`, `xp_regread`, OLE automation procs |
+| `dynamic-sql` | 🔴 CRITICAL | `EXEC`, `EXECUTE`, `PREPARE`, `sp_executesql` |
+| `privilege-escalation` | 🔴 CRITICAL | `CREATE USER`, `ALTER USER`, `SET ROLE` |
+| `stored-procedure` | 🟡 HIGH | `CALL` statements |
+| `unicode-obfuscation` | 🟡 HIGH | Cyrillic/Greek chars masquerading as ASCII |
+| `dangerous-functions` | 🟠 MEDIUM | `SLEEP()`, `pg_sleep()`, `BENCHMARK()` |
+| `hex-encoding` | 🟠 MEDIUM | Hex literals hiding SQL keywords (`0x44524F50` = DROP) |
+| `char-function` | 🟠 MEDIUM | `CHAR(68,82,79,80)` spelling DROP |
+| `string-concat` | 🟠 MEDIUM | `'DR' \|\| 'OP'` concatenation attacks |
+| `transaction-abuse` | 🟠 MEDIUM | `LOCK TABLE` (DoS vector) |
+| `metadata-access` | 🟢 LOW | `information_schema`, `pg_catalog`, system tables |
+| `schema-commands` | 🟢 LOW | `SHOW TABLES`, `DESCRIBE`, `EXPLAIN` |
 
 ### Configuring Security Rules
 
