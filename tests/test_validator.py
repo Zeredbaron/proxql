@@ -35,6 +35,26 @@ class TestSimpleAPI:
         assert result.is_safe is False
         assert "UPDATE" in (result.reason or "")
 
+    def test_is_safe_function(self) -> None:
+        """Test the is_safe() convenience function."""
+        assert proxql.is_safe("SELECT * FROM users") is True
+        assert proxql.is_safe("DROP TABLE users") is False
+
+    def test_validate_with_mode_param(self) -> None:
+        """Test validate() with mode parameter."""
+        # write_safe mode allows INSERT
+        result = proxql.validate("INSERT INTO users (name) VALUES ('x')", mode="write_safe")
+        assert result.is_safe is True
+
+    def test_validate_with_allowed_tables_param(self) -> None:
+        """Test validate() with allowed_tables parameter."""
+        result = proxql.validate(
+            "SELECT * FROM users",
+            allowed_tables=["products", "categories"]
+        )
+        assert result.is_safe is False
+        assert "users" in (result.reason or "")
+
 
 class TestReadOnlyMode:
     """Test read_only mode behavior."""
