@@ -1,0 +1,62 @@
+{
+  "name": "proxql",
+  "version": "0.1.0",
+  "description": "The Database Firewall for AI Agents - SQL validation library that blocks destructive queries",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "sql",
+    "validation",
+    "security",
+    "llm",
+    "ai",
+    "database",
+    "firewall",
+    "agent",
+    "langchain"
+  ],
+  "author": "Baron",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeredbaron/proxql.git",
+    "directory": "packages/typescript"
+  },
+  "homepage": "https://github.com/zeredbaron/proxql",
+  "bugs": {
+    "url": "https://github.com/zeredbaron/proxql/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "node-sql-parser": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}
+
