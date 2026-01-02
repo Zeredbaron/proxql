@@ -1,0 +1,29 @@
+{
+  "name": "System Command Rule",
+  "description": "Tests for system command execution detection",
+  "ruleId": "system-command",
+  "severity": "CRITICAL",
+  "tests": [
+    {
+      "sql": "SELECT xp_cmdshell('whoami')",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW" }
+      },
+      "expected": { "isSafe": false },
+      "description": "SQL Server xp_cmdshell should be blocked"
+    },
+    {
+      "sql": "SELECT xp_regread('HKEY_LOCAL_MACHINE', 'SYSTEM\\\\key')",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW" }
+      },
+      "expected": { "isSafe": false },
+      "description": "SQL Server xp_regread should be blocked"
+    }
+  ]
+}
+
+
+

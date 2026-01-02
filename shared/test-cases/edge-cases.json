@@ -1,0 +1,70 @@
+{
+  "name": "Edge Cases",
+  "description": "Tests for edge cases and unusual inputs",
+  "tests": [
+    {
+      "sql": "SELECT * FROM users WHERE id = 1 AND name = 'test'",
+      "options": { "mode": "read_only" },
+      "expected": {
+        "isSafe": true,
+        "statementType": "SELECT"
+      }
+    },
+    {
+      "sql": "SELECT COUNT(*), AVG(price) FROM products GROUP BY category HAVING COUNT(*) > 5",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": true }
+    },
+    {
+      "sql": "SELECT * FROM users /* ; DROP TABLE users; */",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": true },
+      "description": "SQL comments should be ignored"
+    },
+    {
+      "sql": "SELECT * FROM users -- DROP TABLE users",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": true },
+      "description": "Inline comments should be ignored"
+    },
+    {
+      "sql": "select * from users",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": true },
+      "description": "Lowercase keywords should work"
+    },
+    {
+      "sql": "SeLeCt * FrOm users",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": true },
+      "description": "Mixed case keywords should work"
+    },
+    {
+      "sql": "SELECT 1; DROP TABLE users;",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": false },
+      "description": "Multi-statement should block if any unsafe"
+    },
+    {
+      "sql": "",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": false },
+      "description": "Empty query should be blocked"
+    },
+    {
+      "sql": "   \n\t  ",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": false },
+      "description": "Whitespace-only query should be blocked"
+    },
+    {
+      "sql": "SELEC * FORM users",
+      "options": { "mode": "read_only" },
+      "expected": { "isSafe": false },
+      "description": "Malformed SQL should be blocked"
+    }
+  ]
+}
+
+
+

@@ -1,0 +1,38 @@
+{
+  "name": "Dangerous Functions Rule",
+  "description": "Tests for dangerous SQL function detection",
+  "ruleId": "dangerous-functions",
+  "severity": "MEDIUM",
+  "tests": [
+    {
+      "sql": "SELECT SLEEP(10)",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "MEDIUM" }
+      },
+      "expected": { "isSafe": false },
+      "description": "SLEEP function should be blocked (timing attack)"
+    },
+    {
+      "sql": "SELECT pg_sleep(10)",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "MEDIUM" }
+      },
+      "expected": { "isSafe": false },
+      "description": "PostgreSQL pg_sleep should be blocked"
+    },
+    {
+      "sql": "SELECT BENCHMARK(10000000, SHA1('test'))",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "MEDIUM" }
+      },
+      "expected": { "isSafe": false },
+      "description": "MySQL BENCHMARK should be blocked"
+    }
+  ]
+}
+
+
+

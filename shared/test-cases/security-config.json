@@ -1,0 +1,63 @@
+{
+  "name": "Security Configuration",
+  "description": "Tests for SecurityConfig options",
+  "tests": [
+    {
+      "sql": "SELECT xp_cmdshell('whoami')",
+      "options": {
+        "mode": "read_only",
+        "security": true
+      },
+      "expected": { "isSafe": false },
+      "description": "Default config should block CRITICAL severity violations"
+    },
+    {
+      "sql": "SELECT xp_cmdshell('whoami')",
+      "options": {
+        "mode": "read_only",
+        "security": false
+      },
+      "expected": { "isSafe": true },
+      "description": "Security rules can be disabled entirely"
+    },
+    {
+      "sql": "SELECT xp_cmdshell('whoami')",
+      "options": {
+        "mode": "read_only",
+        "security": {
+          "disabledRules": ["system-command"],
+          "minimumSeverity": "CRITICAL"
+        }
+      },
+      "expected": { "isSafe": true },
+      "description": "Specific rules can be disabled"
+    },
+    {
+      "sql": "SELECT pg_read_file('/etc/passwd')",
+      "options": {
+        "mode": "read_only",
+        "security": {
+          "enabledRules": ["file-access"],
+          "minimumSeverity": "LOW"
+        }
+      },
+      "expected": { "isSafe": false },
+      "description": "Whitelist mode - enabled rule should work"
+    },
+    {
+      "sql": "SELECT xp_cmdshell('whoami')",
+      "options": {
+        "mode": "read_only",
+        "security": {
+          "enabledRules": ["file-access"],
+          "minimumSeverity": "LOW"
+        }
+      },
+      "expected": { "isSafe": true },
+      "description": "Whitelist mode - non-enabled rule should not run"
+    }
+  ]
+}
+
+
+

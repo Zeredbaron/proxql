@@ -1,0 +1,39 @@
+{
+  "name": "Obfuscation Rules",
+  "description": "Tests for SQL obfuscation technique detection",
+  "tests": [
+    {
+      "sql": "SELECT 0x44524F50",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "MEDIUM" }
+      },
+      "expected": {
+        "isSafe": false,
+        "reasonContains": "hex"
+      },
+      "description": "Hex-encoded 'DROP' (0x44524F50) should be detected"
+    },
+    {
+      "sql": "SELECT CONCAT(CHAR(68), CHAR(82), CHAR(79), CHAR(80))",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "MEDIUM" }
+      },
+      "expected": { "isSafe": false },
+      "description": "CHAR() constructing 'DROP' should be detected"
+    },
+    {
+      "sql": "SELECT 'DR' || 'OP'",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "MEDIUM" }
+      },
+      "expected": { "isSafe": false },
+      "description": "String concatenation building 'DROP' should be detected"
+    }
+  ]
+}
+
+
+

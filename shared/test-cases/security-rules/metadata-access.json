@@ -1,0 +1,56 @@
+{
+  "name": "Metadata Access Rule",
+  "description": "Tests for metadata/schema access detection",
+  "ruleId": "metadata-access",
+  "severity": "LOW",
+  "tests": [
+    {
+      "sql": "SELECT * FROM information_schema.tables",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW", "failOnLow": true }
+      },
+      "expected": { "isSafe": false },
+      "description": "Access to information_schema should be detected"
+    },
+    {
+      "sql": "SELECT * FROM pg_catalog.pg_tables",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW", "failOnLow": true }
+      },
+      "expected": { "isSafe": false },
+      "description": "Access to pg_catalog should be detected"
+    },
+    {
+      "sql": "SELECT * FROM pg_roles",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW", "failOnLow": true }
+      },
+      "expected": { "isSafe": false },
+      "description": "Access to pg_* tables should be detected"
+    },
+    {
+      "sql": "SELECT * FROM mysql.user",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW", "failOnLow": true }
+      },
+      "expected": { "isSafe": false },
+      "description": "Access to mysql.user should be detected"
+    },
+    {
+      "sql": "SELECT * FROM information_schema.tables",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "HIGH" }
+      },
+      "expected": { "isSafe": true },
+      "description": "LOW severity rule should not block when minimum is HIGH"
+    }
+  ]
+}
+
+
+

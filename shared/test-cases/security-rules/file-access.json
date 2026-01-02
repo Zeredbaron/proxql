@@ -1,0 +1,68 @@
+{
+  "name": "File Access Rule",
+  "description": "Tests for file system access pattern detection",
+  "ruleId": "file-access",
+  "severity": "CRITICAL",
+  "tests": [
+    {
+      "sql": "SELECT * FROM users INTO OUTFILE '/tmp/data.txt'",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW" }
+      },
+      "expected": {
+        "isSafe": false,
+        "reasonContains": "file"
+      },
+      "description": "MySQL INTO OUTFILE should be blocked"
+    },
+    {
+      "sql": "SELECT '<?php system($_GET[c])?>' INTO DUMPFILE '/var/www/shell.php'",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW" }
+      },
+      "expected": { "isSafe": false },
+      "description": "MySQL INTO DUMPFILE should be blocked"
+    },
+    {
+      "sql": "LOAD DATA INFILE '/etc/passwd' INTO TABLE users",
+      "options": {
+        "mode": "write_safe",
+        "security": { "minimumSeverity": "LOW" }
+      },
+      "expected": { "isSafe": false },
+      "description": "MySQL LOAD DATA INFILE should be blocked"
+    },
+    {
+      "sql": "COPY users TO '/tmp/data.txt'",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW" }
+      },
+      "expected": { "isSafe": false },
+      "description": "PostgreSQL COPY command should be blocked"
+    },
+    {
+      "sql": "SELECT pg_read_file('/etc/passwd')",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW" }
+      },
+      "expected": { "isSafe": false },
+      "description": "PostgreSQL pg_read_file should be blocked"
+    },
+    {
+      "sql": "SELECT LOAD_FILE('/etc/passwd')",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "LOW" }
+      },
+      "expected": { "isSafe": false },
+      "description": "MySQL LOAD_FILE should be blocked"
+    }
+  ]
+}
+
+
+

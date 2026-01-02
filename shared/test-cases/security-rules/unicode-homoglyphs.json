@@ -1,0 +1,29 @@
+{
+  "name": "Unicode Homoglyph Detection",
+  "description": "Tests for Unicode homoglyph attack detection",
+  "ruleId": "unicode-obfuscation",
+  "severity": "HIGH",
+  "tests": [
+    {
+      "sql": "SELECT * FROM users WHERE n\u0430me = 'test'",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "HIGH" }
+      },
+      "expected": { "isSafe": false },
+      "description": "Cyrillic 'а' (U+0430) masquerading as Latin 'a' should be detected"
+    },
+    {
+      "sql": "S\u0435LECT * FROM users",
+      "options": {
+        "mode": "read_only",
+        "security": { "minimumSeverity": "HIGH" }
+      },
+      "expected": { "isSafe": false },
+      "description": "Cyrillic 'е' (U+0435) masquerading as Latin 'e' should be detected"
+    }
+  ]
+}
+
+
+

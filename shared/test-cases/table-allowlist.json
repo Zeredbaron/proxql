@@ -1,0 +1,69 @@
+{
+  "name": "Table Allowlist",
+  "description": "Tests for table allowlist functionality",
+  "tests": [
+    {
+      "sql": "SELECT * FROM products",
+      "options": {
+        "mode": "read_only",
+        "allowedTables": ["products", "categories"]
+      },
+      "expected": { "isSafe": true }
+    },
+    {
+      "sql": "SELECT * FROM users",
+      "options": {
+        "mode": "read_only",
+        "allowedTables": ["products", "categories"]
+      },
+      "expected": {
+        "isSafe": false,
+        "reasonContains": "users"
+      }
+    },
+    {
+      "sql": "SELECT * FROM products JOIN users ON products.user_id = users.id",
+      "options": {
+        "mode": "read_only",
+        "allowedTables": ["products", "categories"]
+      },
+      "expected": {
+        "isSafe": false,
+        "reasonContains": "users"
+      }
+    },
+    {
+      "sql": "SELECT * FROM PRODUCTS",
+      "options": {
+        "mode": "read_only",
+        "allowedTables": ["products", "categories"]
+      },
+      "expected": { "isSafe": true },
+      "description": "Case insensitive table matching"
+    },
+    {
+      "sql": "SELECT * FROM (SELECT * FROM secret_table) AS t",
+      "options": {
+        "mode": "read_only",
+        "allowedTables": ["products"]
+      },
+      "expected": {
+        "isSafe": false,
+        "reasonContains": "secret_table"
+      },
+      "description": "Tables in subqueries should be detected"
+    },
+    {
+      "sql": "WITH temp AS (SELECT * FROM secret_table) SELECT * FROM temp",
+      "options": {
+        "mode": "read_only",
+        "allowedTables": ["allowed_table"]
+      },
+      "expected": { "isSafe": false },
+      "description": "Tables in CTEs should be detected"
+    }
+  ]
+}
+
+
+

@@ -1,0 +1,45 @@
+{
+  "name": "Write-Safe Mode",
+  "description": "Tests for write_safe mode - SELECT, INSERT, UPDATE allowed (no destructive ops)",
+  "tests": [
+    {
+      "sql": "SELECT * FROM users",
+      "options": { "mode": "write_safe" },
+      "expected": { "isSafe": true }
+    },
+    {
+      "sql": "INSERT INTO users (name) VALUES ('test')",
+      "options": { "mode": "write_safe" },
+      "expected": { "isSafe": true }
+    },
+    {
+      "sql": "UPDATE users SET name = 'test' WHERE id = 1",
+      "options": { "mode": "write_safe" },
+      "expected": { "isSafe": true }
+    },
+    {
+      "sql": "DELETE FROM users WHERE id = 1",
+      "options": { "mode": "write_safe" },
+      "expected": {
+        "isSafe": false,
+        "reasonContains": "DELETE"
+      }
+    },
+    {
+      "sql": "DROP TABLE users",
+      "options": { "mode": "write_safe" },
+      "expected": {
+        "isSafe": false,
+        "reasonContains": "DROP"
+      }
+    },
+    {
+      "sql": "TRUNCATE TABLE users",
+      "options": { "mode": "write_safe" },
+      "expected": { "isSafe": false }
+    }
+  ]
+}
+
+
+
