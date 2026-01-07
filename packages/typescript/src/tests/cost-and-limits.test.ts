@@ -1,14 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { Validator, CostEstimator, CostLevel, LimitEnforcer, isLimitOk } from '../index';
-import { Parser } from 'node-sql-parser';
+import { Parser, type AST } from 'node-sql-parser';
 
 describe('CostEstimation', () => {
   const parser = new Parser();
   const estimator = new CostEstimator();
 
-  const parse = (sql: string) => {
+  const parse = (sql: string): AST => {
     const ast = parser.astify(sql, { database: 'postgresql' });
-    return Array.isArray(ast) ? ast[0] : ast;
+    const result = Array.isArray(ast) ? ast[0] : ast;
+    if (!result) throw new Error('Failed to parse SQL');
+    return result;
   };
 
   it('should estimate low cost for simple SELECT', () => {
@@ -106,9 +108,11 @@ describe('CostInValidator', () => {
 describe('LimitEnforcement', () => {
   const parser = new Parser();
 
-  const parse = (sql: string) => {
+  const parse = (sql: string): AST => {
     const ast = parser.astify(sql, { database: 'postgresql' });
-    return Array.isArray(ast) ? ast[0] : ast;
+    const result = Array.isArray(ast) ? ast[0] : ast;
+    if (!result) throw new Error('Failed to parse SQL');
+    return result;
   };
 
   it('should pass query with valid limit', () => {
