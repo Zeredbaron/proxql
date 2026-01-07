@@ -173,16 +173,15 @@ class CostEstimator:
         """Count CROSS JOINs (cartesian products)."""
         count = 0
         for join in expr.find_all(exp.Join):
-            # Check for explicit CROSS JOIN via kind
             kind = join.args.get("kind", "")
-            if kind and "CROSS" in str(kind).upper():
+            is_explicit_cross = kind and "CROSS" in str(kind).upper()
+            is_implicit_cross = (
+                join.args.get("on") is None
+                and join.args.get("using") is None
+                and (not kind or kind == "")
+            )
+            if is_explicit_cross or is_implicit_cross:
                 count += 1
-            # Check for implicit cross join (JOIN without ON/USING condition)
-            elif join.args.get("on") is None and join.args.get("using") is None:
-                # JOIN without condition is effectively a cross join
-                # But only count if it's not an INNER/LEFT/RIGHT/etc with missing condition
-                if not kind or kind == "":
-                    count += 1
         return count
 
     def _get_subquery_depth(self, expr: Expression, depth: int = 0) -> int:
@@ -239,6 +238,6 @@ class CostEstimator:
 
     def _has_wildcard_select(self, expr: Expression) -> bool:
         """Check for SELECT * (wildcard)."""
-        for star in expr.find_all(exp.Star):
+        for _star in expr.find_all(exp.Star):
             return True
         return False
