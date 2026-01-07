@@ -48,7 +48,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .cost import CostEstimate, CostEstimator, CostLevel
 from .exceptions import ConfigurationError, ParseError, ProxQLError
+from .limits import LimitCheckResult, LimitEnforcer
 from .policy import Mode
 from .result import ValidationResult
 from .rules import RuleSeverity
@@ -71,6 +73,13 @@ __all__ = [
     "SecurityConfig",
     "SecurityChecker",
     "RuleSeverity",
+    # Cost estimation
+    "CostEstimate",
+    "CostEstimator",
+    "CostLevel",
+    # Limit enforcement
+    "LimitEnforcer",
+    "LimitCheckResult",
     # Exceptions
     "ProxQLError",
     "ParseError",

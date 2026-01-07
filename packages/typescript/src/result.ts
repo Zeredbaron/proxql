@@ -1,3 +1,5 @@
+import type { CostEstimate } from './cost';
+
 /**
  * Result of a SQL validation check.
  *
@@ -22,22 +24,45 @@ export class ValidationResult {
   /** Tables referenced in the query */
   readonly tables: string[];
 
+  /** Estimated query cost/complexity (undefined if cost estimation disabled) */
+  readonly cost?: CostEstimate;
+
+  /** The LIMIT value if present in the query */
+  readonly limitValue?: number;
+
+  /** Non-blocking issues detected (e.g., high cost queries that passed) */
+  readonly warnings: string[];
+
   private constructor(data: {
     isSafe: boolean;
     reason?: string;
     statementType?: string;
     tables?: string[];
+    cost?: CostEstimate;
+    limitValue?: number;
+    warnings?: string[];
   }) {
     this.isSafe = data.isSafe;
     this.reason = data.reason;
     this.statementType = data.statementType;
     this.tables = data.tables ?? [];
+    this.cost = data.cost;
+    this.limitValue = data.limitValue;
+    this.warnings = data.warnings ?? [];
   }
 
   /**
    * Create a safe validation result.
    */
-  static safe(meta: { statementType?: string; tables?: string[] } = {}): ValidationResult {
+  static safe(
+    meta: {
+      statementType?: string;
+      tables?: string[];
+      cost?: CostEstimate;
+      limitValue?: number;
+      warnings?: string[];
+    } = {}
+  ): ValidationResult {
     return new ValidationResult({ isSafe: true, ...meta });
   }
 
@@ -46,7 +71,13 @@ export class ValidationResult {
    */
   static unsafe(
     reason: string,
-    meta: { statementType?: string; tables?: string[] } = {}
+    meta: {
+      statementType?: string;
+      tables?: string[];
+      cost?: CostEstimate;
+      limitValue?: number;
+      warnings?: string[];
+    } = {}
   ): ValidationResult {
     return new ValidationResult({ isSafe: false, reason, ...meta });
   }

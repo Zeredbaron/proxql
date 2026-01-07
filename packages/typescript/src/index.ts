@@ -29,6 +29,10 @@ export type { ValidatorOptions, Mode } from './validator';
 export { ValidationResult } from './result';
 export { SecurityConfig, RuleSeverity } from './security';
 export type { SecurityConfigOptions } from './security';
+export { CostEstimator, CostLevel, isCostAcceptable } from './cost';
+export type { CostEstimate } from './cost';
+export { LimitEnforcer, isLimitOk } from './limits';
+export type { LimitCheckResult, LimitEnforcerOptions } from './limits';
 
 import { Validator, type ValidatorOptions } from './validator';
 import type { ValidationResult } from './result';

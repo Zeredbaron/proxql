@@ -1,4 +1,6 @@
 import { Parser, type AST } from 'node-sql-parser';
+import { CostEstimate, CostEstimator, CostLevel } from './cost';
+import { LimitEnforcer, isLimitOk } from './limits';
 import { ValidationResult } from './result';
 import { SecurityConfig, type SecurityConfigOptions } from './security';
 import { runSecurityRules } from './rules';
@@ -24,6 +26,16 @@ export interface ValidatorOptions {
   dialect?: string;
   /** Security rule configuration (true/false/SecurityConfig/SecurityConfigOptions) */
   securityConfig?: boolean | SecurityConfig | SecurityConfigOptions;
+  /** Maximum allowed LIMIT value */
+  maxRows?: number;
+  /** If true, SELECT queries without LIMIT are rejected */
+  requireLimit?: boolean;
+  /** If true, estimate query cost/complexity */
+  estimateCost?: boolean;
+  /** If true, block queries with HIGH or EXTREME cost */
+  blockHighCost?: boolean;
+  /** Maximum allowed cost level */
+  maxCostLevel?: CostLevel | keyof typeof CostLevel;
 }
 
 // Statement types allowed in each mode
@@ -64,6 +76,9 @@ export class Validator {
   private readonly dialect: string;
   private readonly securityConfig: SecurityConfig | null;
   private readonly parser: Parser;
+  private readonly limitEnforcer: LimitEnforcer | null;
+  private readonly costEstimator: CostEstimator | null;
+  private readonly maxCostLevel: CostLevel | null;
 
   constructor(options: ValidatorOptions = {}) {
     this.mode = options.mode ?? 'read_only';
@@ -92,6 +107,33 @@ export class Validator {
     // Initialize statement rules based on mode
     this.allowedStatements = this.initAllowedStatements(options);
     this.blockedStatements = this.initBlockedStatements(options);
+
+    // Set up limit enforcer
+    if (options.maxRows !== undefined || options.requireLimit) {
+      this.limitEnforcer = new LimitEnforcer({
+        maxRows: options.maxRows,
+        requireLimit: options.requireLimit,
+      });
+    } else {
+      this.limitEnforcer = null;
+    }
+
+    // Set up cost estimator
+    const shouldEstimateCost =
+      options.estimateCost || options.blockHighCost || options.maxCostLevel !== undefined;
+    this.costEstimator = shouldEstimateCost ? new CostEstimator() : null;
+
+    // Set up max cost level
+    if (options.maxCostLevel !== undefined) {
+      this.maxCostLevel =
+        typeof options.maxCostLevel === 'string'
+          ? CostLevel[options.maxCostLevel]
+          : options.maxCostLevel;
+    } else if (options.blockHighCost) {
+      this.maxCostLevel = CostLevel.MEDIUM;
+    } else {
+      this.maxCostLevel = null;
+    }
   }
 
   private initAllowedStatements(options: ValidatorOptions): Set<string> | null {
@@ -144,6 +186,10 @@ export class Validator {
         return ValidationResult.unsafe('No valid SQL statements found');
       }
 
+      const warnings: string[] = [];
+      let combinedCost: CostEstimate | undefined;
+      let limitValue: number | undefined;
+
       // Validate each statement
       for (const stmt of statements) {
         // 1. Check statement type
@@ -153,9 +199,52 @@ export class Validator {
         // 2. Check table allowlist
         const tableResult = this.checkTables(stmt, sql);
         if (!tableResult.isSafe) return tableResult;
+
+        // 3. Check limit enforcement
+        if (this.limitEnforcer) {
+          const limitResult = this.limitEnforcer.check(stmt);
+          if (!isLimitOk(limitResult)) {
+            return ValidationResult.unsafe(limitResult.reason!, {
+              statementType: this.getStatementType(stmt),
+              tables: this.extractTables(stmt),
+            });
+          }
+          if (limitResult.limitValue !== undefined) {
+            limitValue = limitResult.limitValue;
+          }
+        }
+
+        // 4. Check cost estimation
+        if (this.costEstimator) {
+          const cost = this.costEstimator.estimate(stmt);
+
+          // Track highest cost across statements
+          if (!combinedCost || cost.level > combinedCost.level) {
+            combinedCost = cost;
+          }
+
+          // Check if cost exceeds maximum
+          if (this.maxCostLevel !== null && cost.level > this.maxCostLevel) {
+            return ValidationResult.unsafe(
+              `Query cost (${CostLevel[cost.level]}) exceeds maximum allowed (${CostLevel[this.maxCostLevel]})`,
+              {
+                statementType: this.getStatementType(stmt),
+                tables: this.extractTables(stmt),
+                cost,
+              }
+            );
+          }
+
+          // Add warnings for high-cost queries that aren't blocked
+          if (cost.level >= CostLevel.HIGH && this.maxCostLevel === null) {
+            warnings.push(
+              `High cost query (${CostLevel[cost.level]}): ${cost.factors.join(', ')}`
+            );
+          }
+        }
       }
 
-      // 3. Run security rules (on entire query)
+      // 5. Run security rules (on entire query)
       if (this.securityConfig) {
         const securityResult = runSecurityRules(sql, ast, this.securityConfig);
         if (!securityResult.isSafe) return securityResult;
@@ -166,6 +255,9 @@ export class Validator {
       return ValidationResult.safe({
         statementType: this.getStatementType(firstStmt),
         tables: this.extractAllTables(statements),
+        cost: combinedCost,
+        limitValue,
+        warnings,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
