@@ -136,6 +136,46 @@ Validator(dialect="snowflake")
 # ... bigquery, redshift, duckdb, etc.
 ```
 
+### Row Limits
+
+Prevent unbounded queries:
+
+```python
+validator = Validator(
+    mode="read_only",
+    max_rows=1000,       # Reject LIMIT > 1000
+    require_limit=True   # Reject queries without LIMIT
+)
+
+validator.validate("SELECT * FROM users").is_safe           # False - no LIMIT
+validator.validate("SELECT * FROM users LIMIT 500").is_safe # True
+validator.validate("SELECT * FROM users LIMIT 5000").is_safe # False - exceeds max
+```
+
+### Cost Estimation
+
+Flag expensive queries before they hit the database:
+
+```python
+validator = Validator(
+    mode="read_only",
+    estimate_cost=True,
+    max_cost_level="MEDIUM"  # Block HIGH/EXTREME cost queries
+)
+
+result = validator.validate("""
+    SELECT * FROM orders o
+    JOIN users u ON o.user_id = u.id
+    JOIN products p ON o.product_id = p.id
+    ORDER BY o.created_at
+""")
+
+result.cost.level    # CostLevel.HIGH
+result.cost.factors  # ['2 JOIN(s)', 'ORDER BY without LIMIT', ...]
+```
+
+Cost factors detected: JOINs, cross joins, subquery depth, missing WHERE, ORDER BY without LIMIT, aggregations, UNION, SELECT *.
+
 ### Pattern Detection
 
 Catches common issues and injection patterns:
