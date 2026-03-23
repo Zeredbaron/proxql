@@ -268,10 +268,20 @@ Think of it as a seatbelt, not a force field.
 
 ## Contributing
 
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and guidelines.
+
 ```bash
 cd packages/python && pip install -e ".[dev]" && pytest
 cd packages/typescript && npm install && npm test
 ```
+
+For AI coding agents, see [AGENTS.md](AGENTS.md) for project structure, architecture, and conventions.
+
+---
+
+## Security
+
+Found a vulnerability or bypass? See [SECURITY.md](SECURITY.md) for reporting instructions.
 
 ---
 

@@ -1,0 +1,45 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the suggestion! Please describe what you'd like to see.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do? What doesn't work today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How do you think this should work? Include example code or API sketches if possible.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Security rules
+        - Validation modes
+        - Cost estimation
+        - Dialect support
+        - Integration (LangChain, FastAPI, etc.)
+        - Performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - Python
+        - TypeScript/JavaScript
+        - Both
+        - N/A

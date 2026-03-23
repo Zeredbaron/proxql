@@ -1,0 +1,57 @@
+name: Bug Report
+description: Report a bug in ProxQL
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting a bug! Please fill out the details below.
+  - type: input
+    id: version
+    attributes:
+      label: ProxQL version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - Python
+        - TypeScript/JavaScript
+        - Both
+    validations:
+      required: true
+  - type: textarea
+    id: sql-query
+    attributes:
+      label: SQL query
+      description: The SQL query that triggered the bug
+      render: sql
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Validator configuration
+      description: How is your Validator configured?
+      render: python
+  - type: input
+    id: dialect
+    attributes:
+      label: SQL dialect
+      placeholder: "postgres, mysql, snowflake, etc."
